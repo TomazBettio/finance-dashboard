@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { products, inventoryStock } from '@/modules/inventory/schema'
+import { products, inventoryStock, movementReasons } from '@/modules/inventory/schema'
 import { getOrCreateTenant } from '@/lib/tenant'
 import { eq } from 'drizzle-orm'
 import { ProductTable } from '@/components/inventory/product-table'
@@ -7,18 +7,28 @@ import { ProductTable } from '@/components/inventory/product-table'
 export default async function InventoryPage() {
   const tenant = await getOrCreateTenant()
 
-  const rows = await db
-    .select({
-      id: products.id,
-      name: products.name,
-      sku: products.sku,
-      basePrice: products.basePrice,
-      quantity: inventoryStock.quantity,
-      location: inventoryStock.location,
-    })
-    .from(products)
-    .leftJoin(inventoryStock, eq(products.id, inventoryStock.productId))
-    .where(eq(products.tenantId, tenant.id))
+  const [rows, reasons] = await Promise.all([
+    db
+      .select({
+        id: products.id,
+        name: products.name,
+        sku: products.sku,
+        basePrice: products.basePrice,
+        quantity: inventoryStock.quantity,
+        location: inventoryStock.location,
+      })
+      .from(products)
+      .leftJoin(inventoryStock, eq(products.id, inventoryStock.productId))
+      .where(eq(products.tenantId, tenant.id)),
+    db
+      .select({
+        id: movementReasons.id,
+        name: movementReasons.name,
+        type: movementReasons.type,
+      })
+      .from(movementReasons)
+      .where(eq(movementReasons.tenantId, tenant.id)),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,7 +39,7 @@ export default async function InventoryPage() {
         </p>
       </div>
 
-      <ProductTable products={rows} />
+      <ProductTable products={rows} reasons={reasons} />
     </div>
   )
 }

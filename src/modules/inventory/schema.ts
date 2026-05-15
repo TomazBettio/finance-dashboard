@@ -1,5 +1,7 @@
-import { pgTable, serial, varchar, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { tenants } from "../core/schema";
+
+export const movementTypeEnum = pgEnum("movement_type", ["entry", "exit"]);
 
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -21,8 +23,25 @@ export const inventoryStock = pgTable("inventory_stock", {
   tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
   quantity: integer("quantity").notNull().default(0),
-  location: varchar("location", { length: 255 }), // e.g., 'Aisle 5', 'Warehouse A'
-  
+  location: varchar("location", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const movementReasons = pgTable("movement_reasons", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: movementTypeEnum("type").notNull(), // 'entry' or 'exit'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const stockMovements = pgTable("stock_movements", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  type: movementTypeEnum("type").notNull(),
+  quantity: integer("quantity").notNull(), // always positive; direction given by type
+  reasonId: integer("reason_id").references(() => movementReasons.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

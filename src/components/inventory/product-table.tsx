@@ -4,16 +4,21 @@ import { useState, useTransition } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { ProductForm, type ProductRow } from './product-form'
+import { StockMovementForm } from './stock-movement-form'
 import { deleteProduct } from '@/modules/inventory/actions'
-import { Plus, Pencil, Trash2, Package } from 'lucide-react'
+import { Plus, Pencil, Trash2, Package, ArrowDownUp } from 'lucide-react'
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
 }
 
-export function ProductTable({ products }: { products: ProductRow[] }) {
+type ReasonRow = { id: number; name: string; type: 'entry' | 'exit' }
+
+export function ProductTable({ products, reasons }: { products: ProductRow[]; reasons: ReasonRow[] }) {
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<ProductRow | null>(null)
+  const [movingProduct, setMovingProduct] = useState<ProductRow | null>(null)
+  const [isMovementOpen, setIsMovementOpen] = useState(false)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -25,6 +30,11 @@ export function ProductTable({ products }: { products: ProductRow[] }) {
   function openEdit(product: ProductRow) {
     setEditing(product)
     setIsOpen(true)
+  }
+
+  function openMovement(product: ProductRow) {
+    setMovingProduct(product)
+    setIsMovementOpen(true)
   }
 
   function handleDelete(id: number) {
@@ -83,6 +93,10 @@ export function ProductTable({ products }: { products: ProductRow[] }) {
                   <td className="px-4 py-3 text-muted-foreground">{product.location ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon-sm" onClick={() => openMovement(product)}>
+                        <ArrowDownUp />
+                        <span className="sr-only">Movimentar estoque</span>
+                      </Button>
                       <Button variant="ghost" size="icon-sm" onClick={() => openEdit(product)}>
                         <Pencil />
                         <span className="sr-only">Editar</span>
@@ -118,6 +132,25 @@ export function ProductTable({ products }: { products: ProductRow[] }) {
             product={editing}
             onSuccess={() => setIsOpen(false)}
           />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isMovementOpen} onOpenChange={(open) => setIsMovementOpen(open)}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Movimentar Estoque</SheetTitle>
+            <SheetDescription>
+              Registre uma entrada ou baixa no estoque do produto.
+            </SheetDescription>
+          </SheetHeader>
+          {movingProduct && (
+            <StockMovementForm
+              key={movingProduct.id}
+              product={movingProduct}
+              reasons={reasons}
+              onSuccess={() => setIsMovementOpen(false)}
+            />
+          )}
         </SheetContent>
       </Sheet>
     </>

@@ -8,6 +8,27 @@
       "when": 1778800213007,
       "tag": "0000_colossal_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778807493910,
+      "tag": "0001_yellow_wolf_cub",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778808774706,
+      "tag": "0002_cold_thena",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778809339944,
+      "tag": "0003_material_doomsday",
+      "breakpoints": true
     }
   ]
 }

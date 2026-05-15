@@ -4,7 +4,12 @@
       "PowerShell(docker --version 2>&1; docker ps 2>&1 | Select-Object -First 5)",
       "PowerShell(Start-Sleep -Seconds 3; Invoke-WebRequest -Uri \"http://localhost:3001/dashboard/inventory\" -UseBasicParsing -TimeoutSec 15 2>&1 | Select-Object -ExpandProperty StatusCode)",
       "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/dashboard/inventory\" -UseBasicParsing -TimeoutSec 15; $r.Content | Select-String -Pattern \"Estoque|produto|Novo Produto|Nenhum produto\" | Select-Object -First 10)",
-      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/dashboard/inventory\" -UseBasicParsing -TimeoutSec 15; if \\($r.Content -match \"Estoque\"\\) { \"OK: titulo encontrado\" }; if \\($r.Content -match \"Nenhum produto\"\\) { \"OK: estado vazio encontrado\" }; if \\($r.Content -match \"Novo Produto\"\\) { \"OK: botao encontrado\" })"
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/dashboard/inventory\" -UseBasicParsing -TimeoutSec 15; if \\($r.Content -match \"Estoque\"\\) { \"OK: titulo encontrado\" }; if \\($r.Content -match \"Nenhum produto\"\\) { \"OK: estado vazio encontrado\" }; if \\($r.Content -match \"Novo Produto\"\\) { \"OK: botao encontrado\" })",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/dashboard/inventory\" -UseBasicParsing -TimeoutSec 15; $r.StatusCode)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/dashboard\" -UseBasicParsing -TimeoutSec 15; if \\($r.Content -match \"Produtos Cadastrados\"\\) { \"OK: KPIs reais\" }; if \\($r.Content -match \"Movimentações Recentes\"\\) { \"OK: feed de atividade\" }; if \\($r.Content -match \"Valor do Estoque\"\\) { \"OK: valor calculado\" })",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/dashboard\" -UseBasicParsing -TimeoutSec 20; $r.StatusCode; if \\($r.Content -match \"últimos 14 dias\"\\) { \"OK: titulo do grafico\" }; if \\($r.Content -match \"recharts\"\\) { \"OK: recharts no bundle\" })",
+      "PowerShell($s = Invoke-WebRequest \"http://localhost:3001/dashboard/settings\" -UseBasicParsing -TimeoutSec 20; $s.StatusCode; if \\($s.Content -match \"Motivos de Entrada\"\\) { \"OK: settings page\" }; if \\($s.Content -match \"Motivos de Sa\"\\) { \"OK: exit reasons\" })",
+      "PowerShell($i = Invoke-WebRequest \"http://localhost:3001/dashboard/inventory\" -UseBasicParsing -TimeoutSec 20; $i.StatusCode; if \\($i.Content -match \"reasonId\"\\) { \"OK: select com reasonId\" })"
     ]
   }
 }
