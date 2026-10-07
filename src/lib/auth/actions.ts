@@ -3,13 +3,53 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { memberships, tenants, users } from '@/modules/core/schema'
 import { requireUser, type AuthUser } from './session'
 import { COOKIE_OPTIONS, SESSION_COOKIE, TENANT_COOKIE, signSessionCookie } from './token'
 
 type ActionState = { error: string } | { success: true } | null
+
+// Lock para serializar o vínculo de tenants legados ao primeiro usuário do sistema.
+const LEGACY_BIND_LOCK_ID = 420001
+
+async function createUserWithLegacyTenants(name: string, email: string): Promise<AuthUser> {
+  return db.transaction(async (tx) => {
+    const [user] = await tx.insert(users).values({ name, email }).returning()
+
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${LEGACY_BIND_LOCK_ID})`)
+
+    const [anyMembership] = await tx
+      .select({ id: memberships.id })
+      .from(memberships)
+      .limit(1)
+
+    // Primeiro usuário do sistema herda como owner os tenants sem nenhuma membership (dados legados).
+    if (!anyMembership) {
+      const orphanTenants = await tx
+        .select({ id: tenants.id })
+        .from(tenants)
+        .leftJoin(memberships, eq(memberships.tenantId, tenants.id))
+        .where(isNull(memberships.id))
+
+      if (orphanTenants.length > 0) {
+        await tx
+          .insert(memberships)
+          .values(
+            orphanTenants.map((t) => ({
+              userId: user.id,
+              tenantId: t.id,
+              role: 'owner' as const,
+            })),
+          )
+          .onConflictDoNothing()
+      }
+    }
+
+    return user
+  })
+}
 
 // Login simulado: sem senha; cria o usuário no primeiro acesso.
 export async function signIn(email: string, name?: string): Promise<{ error: string } | undefined> {
@@ -25,10 +65,11 @@ export async function signIn(email: string, name?: string): Promise<{ error: str
   } else {
     const displayName = name?.trim() || normalized.split('@')[0]
     try {
-      ;[user] = await db.insert(users).values({ name: displayName, email: normalized }).returning()
-    } catch {
+      user = await createUserWithLegacyTenants(displayName, normalized)
+    } catch (err) {
       // e-mail único: outro request pode ter criado o usuário simultaneamente
       const [retry] = await db.select().from(users).where(eq(users.email, normalized)).limit(1)
+      if (!retry) throw err
       user = retry
     }
   }
