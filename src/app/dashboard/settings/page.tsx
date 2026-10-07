@@ -3,12 +3,14 @@ import { movementReasons } from '@/modules/inventory/schema'
 import { requireTenant } from '@/lib/auth/session'
 import { getEnabledModuleKeys } from '@/lib/modules'
 import { MODULES } from '@/modules/registry'
+import { getProductFieldDefs } from '@/modules/custom-fields/queries'
 import { eq } from 'drizzle-orm'
 import { ReasonForm } from '@/components/settings/reason-form'
 import { SettingsCard } from '@/components/settings/settings-card'
 import { ModuleToggle } from '@/components/settings/module-toggle'
+import { CustomFieldsManager } from '@/components/settings/custom-field-form'
 import { deleteMovementReason } from '@/modules/settings/actions'
-import { Blocks, Tag, Trash2 } from 'lucide-react'
+import { Blocks, ListPlus, Tag, Trash2 } from 'lucide-react'
 
 export default async function SettingsPage() {
   const { tenant, role } = await requireTenant()
@@ -23,6 +25,8 @@ export default async function SettingsPage() {
         .where(eq(movementReasons.tenantId, tenant.id))
         .orderBy(movementReasons.type, movementReasons.name)
     : []
+
+  const fieldDefs = inventoryEnabled ? await getProductFieldDefs(tenant.id) : []
 
   return (
     <div className="flex flex-col gap-6">
@@ -138,6 +142,16 @@ export default async function SettingsPage() {
               </p>
             )}
           </div>
+        </SettingsCard>
+      )}
+
+      {inventoryEnabled && (
+        <SettingsCard
+          title="Campos personalizados — Produtos"
+          description="Campos extras aplicados aos produtos desta empresa."
+          icon={<ListPlus className="h-4 w-4" />}
+        >
+          <CustomFieldsManager defs={fieldDefs} canManage={canManage} />
         </SettingsCard>
       )}
     </div>

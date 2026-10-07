@@ -4,6 +4,7 @@ import { useActionState, useEffect } from 'react'
 import { createProduct, updateProduct } from '@/modules/inventory/actions'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { formatNumberForInput, type CustomFieldRow } from '@/modules/custom-fields/validation'
 
 export type ProductRow = {
   id: number
@@ -12,20 +13,30 @@ export type ProductRow = {
   basePrice: number
   quantity: number | null
   location: string | null
+  metadata: Record<string, unknown> | null
 }
 
 type Props = {
   product?: ProductRow | null
+  fieldDefs: CustomFieldRow[]
   onSuccess: () => void
 }
 
-export function ProductForm({ product, onSuccess }: Props) {
+const selectClass =
+  'h-8 w-full cursor-pointer rounded-lg border border-input bg-card px-2.5 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+
+export function ProductForm({ product, fieldDefs, onSuccess }: Props) {
   const action = product ? updateProduct.bind(null, product.id) : createProduct
   const [state, formAction, pending] = useActionState(action, null)
 
   useEffect(() => {
     if (state && 'success' in state) onSuccess()
   }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function metaValue(key: string) {
+    const v = product?.metadata?.[key]
+    return v === null || v === undefined ? '' : String(v)
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4 p-4 overflow-y-auto">
@@ -86,6 +97,60 @@ export function ProductForm({ product, onSuccess }: Props) {
           />
         </div>
       </div>
+
+      {fieldDefs.length > 0 && (
+        <div className="flex flex-col gap-4 border-t pt-4">
+          <p className="text-sm font-medium text-muted-foreground">Campos personalizados</p>
+          {fieldDefs.map((def) => (
+            <div key={def.key} className="flex flex-col gap-1.5">
+              {def.type === 'boolean' ? (
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    name={`cf_${def.key}`}
+                    defaultChecked={product?.metadata?.[def.key] === true}
+                    className="size-4 accent-primary"
+                  />
+                  {def.label}
+                  {def.required ? ' *' : ''}
+                </label>
+              ) : def.type === 'select' ? (
+                <>
+                  <label className="text-sm font-medium">
+                    {def.label}
+                    {def.required ? ' *' : ''}
+                  </label>
+                  <select name={`cf_${def.key}`} defaultValue={metaValue(def.key)} className={selectClass}>
+                    <option value="">—</option>
+                    {def.options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <label className="text-sm font-medium">
+                    {def.label}
+                    {def.required ? ' *' : ''}
+                  </label>
+                  <Input
+                    name={`cf_${def.key}`}
+                    type={def.type === 'date' ? 'date' : 'text'}
+                    inputMode={def.type === 'number' ? 'decimal' : undefined}
+                    defaultValue={
+                      def.type === 'number' && typeof product?.metadata?.[def.key] === 'number'
+                        ? formatNumberForInput(product.metadata[def.key] as number)
+                        : metaValue(def.key)
+                    }
+                  />
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <Button type="submit" disabled={pending} className="mt-2">
         {pending ? 'Salvando...' : product ? 'Salvar Alterações' : 'Criar Produto'}

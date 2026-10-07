@@ -3,6 +3,8 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, stockMovements, movementReasons } from './schema'
 import { requireModule } from '@/lib/modules'
+import { getProductFieldDefs } from '@/modules/custom-fields/queries'
+import { parseCustomFieldValues } from '@/modules/custom-fields/validation'
 import { and, eq, gte, lte, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
@@ -94,6 +96,13 @@ export async function createProduct(
   if (!fields.ok) return { error: fields.error }
   const { name, sku, basePrice, quantity, location } = fields.data
 
+  const fieldDefs = await getProductFieldDefs(tenantId)
+  const parsed = parseCustomFieldValues(fieldDefs, formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const metadata = Object.fromEntries(
+    Object.entries(parsed.values).filter(([, v]) => v !== null),
+  )
+
   try {
     const result = await db.transaction(async (tx): Promise<ActionState> => {
       if (sku) {
@@ -107,7 +116,7 @@ export async function createProduct(
 
       const [product] = await tx
         .insert(products)
-        .values({ tenantId, name, sku, basePrice })
+        .values({ tenantId, name, sku, basePrice, metadata })
         .returning({ id: products.id })
       await tx
         .insert(inventoryStock)
@@ -140,14 +149,27 @@ export async function updateProduct(
   if (!fields.ok) return { error: fields.error }
   const { name, sku, basePrice, quantity, location } = fields.data
 
+  const fieldDefs = await getProductFieldDefs(tenantId)
+  const parsed = parseCustomFieldValues(fieldDefs, formData)
+  if (!parsed.ok) return { error: parsed.error }
+
   try {
     const result = await db.transaction(async (tx): Promise<ActionState> => {
       const [product] = await tx
-        .select({ id: products.id })
+        .select({ id: products.id, metadata: products.metadata })
         .from(products)
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
         .limit(1)
       if (!product) return { error: 'Produto não encontrado' }
+
+      // Mescla os valores das defs atuais sobre o metadata existente,
+      // preservando chaves de campos já excluídos.
+      const metadata = { ...(product.metadata ?? {}) }
+      for (const def of fieldDefs) {
+        const v = parsed.values[def.key]
+        if (v === null || v === undefined) delete metadata[def.key]
+        else metadata[def.key] = v
+      }
 
       if (sku) {
         const [dup] = await tx
@@ -166,7 +188,7 @@ export async function updateProduct(
 
       await tx
         .update(products)
-        .set({ name, sku, basePrice, updatedAt: new Date() })
+        .set({ name, sku, basePrice, metadata, updatedAt: new Date() })
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
 
       const [existing] = await tx

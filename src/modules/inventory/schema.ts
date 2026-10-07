@@ -12,7 +12,7 @@ export const products = pgTable("products", {
 
   // The core of the dynamic feature:
   // Clients can add their own fields here like { "expiration_date": "...", "color": "red" }
-  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

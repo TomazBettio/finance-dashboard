@@ -1,13 +1,14 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, movementReasons } from '@/modules/inventory/schema'
 import { requireModule } from '@/lib/modules'
+import { getProductFieldDefs } from '@/modules/custom-fields/queries'
 import { and, eq } from 'drizzle-orm'
 import { ProductTable } from '@/components/inventory/product-table'
 
 export default async function InventoryPage() {
   const { tenant } = await requireModule('inventory')
 
-  const [rows, reasons] = await Promise.all([
+  const [rows, reasons, fieldDefs] = await Promise.all([
     db
       .select({
         id: products.id,
@@ -16,6 +17,7 @@ export default async function InventoryPage() {
         basePrice: products.basePrice,
         quantity: inventoryStock.quantity,
         location: inventoryStock.location,
+        metadata: products.metadata,
       })
       .from(products)
       .leftJoin(
@@ -31,6 +33,7 @@ export default async function InventoryPage() {
       })
       .from(movementReasons)
       .where(eq(movementReasons.tenantId, tenant.id)),
+    getProductFieldDefs(tenant.id),
   ])
 
   return (
@@ -42,7 +45,7 @@ export default async function InventoryPage() {
         </p>
       </div>
 
-      <ProductTable products={rows} reasons={reasons} />
+      <ProductTable products={rows} reasons={reasons} fieldDefs={fieldDefs} />
     </div>
   )
 }

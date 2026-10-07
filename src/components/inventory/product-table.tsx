@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ProductForm, type ProductRow } from './product-form'
 import { StockMovementForm } from './stock-movement-form'
 import { deleteProduct } from '@/modules/inventory/actions'
+import { formatCustomFieldValue, type CustomFieldRow } from '@/modules/custom-fields/validation'
 import { Plus, Pencil, Trash2, Package, ArrowDownUp } from 'lucide-react'
 
 function formatCurrency(cents: number) {
@@ -14,7 +15,16 @@ function formatCurrency(cents: number) {
 
 type ReasonRow = { id: number; name: string; type: 'entry' | 'exit' }
 
-export function ProductTable({ products, reasons }: { products: ProductRow[]; reasons: ReasonRow[] }) {
+export function ProductTable({
+  products,
+  reasons,
+  fieldDefs,
+}: {
+  products: ProductRow[]
+  reasons: ReasonRow[]
+  fieldDefs: CustomFieldRow[]
+}) {
+  const tableDefs = fieldDefs.filter((d) => d.showInTable)
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<ProductRow | null>(null)
   const [movingProduct, setMovingProduct] = useState<ProductRow | null>(null)
@@ -76,6 +86,11 @@ export function ProductTable({ products, reasons }: { products: ProductRow[]; re
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Preço</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Estoque</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Localização</th>
+                {tableDefs.map((def) => (
+                  <th key={def.key} className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    {def.label}
+                  </th>
+                ))}
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -91,6 +106,11 @@ export function ProductTable({ products, reasons }: { products: ProductRow[]; re
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{product.location ?? '—'}</td>
+                  {tableDefs.map((def) => (
+                    <td key={def.key} className="px-4 py-3 text-muted-foreground">
+                      {formatCustomFieldValue(def, product.metadata?.[def.key])}
+                    </td>
+                  ))}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon-sm" onClick={() => openMovement(product)}>
@@ -130,6 +150,7 @@ export function ProductTable({ products, reasons }: { products: ProductRow[]; re
           <ProductForm
             key={editing?.id ?? 'new'}
             product={editing}
+            fieldDefs={fieldDefs}
             onSuccess={() => setIsOpen(false)}
           />
         </SheetContent>

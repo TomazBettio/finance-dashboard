@@ -4,6 +4,7 @@ import * as coreSchema from '@/modules/core/schema';
 import * as inventorySchema from '@/modules/inventory/schema';
 import * as salesSchema from '@/modules/sales/schema';
 import * as invoicesSchema from '@/modules/invoices/schema';
+import * as customFieldsSchema from '@/modules/custom-fields/schema';
 
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/dynamic-saas';
 
@@ -11,5 +12,5 @@ const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgr
 const client = postgres(connectionString, { prepare: false });
 
 export const db = drizzle(client, {
-  schema: { ...coreSchema, ...inventorySchema, ...salesSchema, ...invoicesSchema },
+  schema: { ...coreSchema, ...inventorySchema, ...salesSchema, ...invoicesSchema, ...customFieldsSchema },
 });
