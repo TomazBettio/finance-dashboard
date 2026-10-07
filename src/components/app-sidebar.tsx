@@ -9,28 +9,33 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Package, Settings } from "lucide-react"
+import { LayoutDashboard, Package, Settings, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 
-const items = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Produtos (Estoque)",
-    url: "/dashboard/inventory",
-    icon: Package,
-  },
-  {
-    title: "Configurações",
-    url: "/dashboard/settings",
-    icon: Settings,
-  },
-]
+export type ModuleNavItem = { title: string; url: string; icon: string }
 
-export function AppSidebar() {
+const ICONS: Record<string, LucideIcon> = {
+  package: Package,
+}
+
+export function AppSidebar({ moduleNav }: { moduleNav: ModuleNavItem[] }) {
+  const items = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    ...moduleNav.map((item) => ({
+      ...item,
+      icon: ICONS[item.icon] ?? Package,
+    })),
+    {
+      title: "Configurações",
+      url: "/dashboard/settings",
+      icon: Settings,
+    },
+  ]
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">

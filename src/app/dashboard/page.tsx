@@ -1,9 +1,11 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, stockMovements, movementReasons } from '@/modules/inventory/schema'
 import { requireTenant } from '@/lib/auth/session'
+import { getEnabledModuleKeys } from '@/lib/modules'
 import { eq, sum, count, sql, desc, and, gte } from 'drizzle-orm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Package, AlertCircle, ArrowDownToLine, ArrowUpFromLine, Layers } from 'lucide-react'
+import Link from 'next/link'
 import { MovementsChart, type ChartPoint } from '@/components/dashboard/movements-chart'
 
 export const dynamic = 'force-dynamic'
@@ -55,6 +57,26 @@ function buildChartData(
 export default async function DashboardPage() {
   const { tenant } = await requireTenant()
   const tenantId = tenant.id
+
+  const enabledModules = await getEnabledModuleKeys(tenantId)
+  if (!enabledModules.has('inventory')) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral do seu estoque.</p>
+        </div>
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            O módulo de estoque está desativado.{' '}
+            <Link href="/dashboard/settings" className="underline underline-offset-2 hover:text-foreground">
+              Ative módulos em Configurações
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const fourteenDaysAgo = new Date()
   fourteenDaysAgo.setUTCDate(fourteenDaysAgo.getUTCDate() - 14)

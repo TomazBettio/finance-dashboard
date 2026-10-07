@@ -37,6 +37,12 @@ export async function listMemberships(userId: number) {
     .orderBy(asc(memberships.id))
 }
 
+export async function requireRole(roles: MembershipRole[]) {
+  const ctx = await requireTenant()
+  if (!roles.includes(ctx.role)) throw new Error('Sem permissão')
+  return ctx
+}
+
 export async function requireTenant(): Promise<{
   user: AuthUser
   tenant: AuthTenant

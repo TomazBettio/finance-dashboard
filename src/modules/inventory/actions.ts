@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db'
 import { products, inventoryStock, stockMovements, movementReasons } from './schema'
-import { requireTenant } from '@/lib/auth/session'
+import { requireModule } from '@/lib/modules'
 import { and, eq, gte, lte, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
@@ -87,7 +87,7 @@ export async function createProduct(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { tenant } = await requireTenant()
+  const { tenant } = await requireModule('inventory')
   const tenantId = tenant.id
 
   const fields = readProductFields(formData)
@@ -131,7 +131,7 @@ export async function updateProduct(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { tenant } = await requireTenant()
+  const { tenant } = await requireModule('inventory')
   const tenantId = tenant.id
 
   if (!Number.isInteger(id) || id <= 0) return { error: 'Produto inválido' }
@@ -200,7 +200,7 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: number): Promise<void> {
-  const { tenant } = await requireTenant()
+  const { tenant } = await requireModule('inventory')
   const tenantId = tenant.id
   if (!Number.isInteger(id) || id <= 0) return
 
@@ -225,7 +225,7 @@ export async function registerStockMovement(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { tenant } = await requireTenant()
+  const { tenant } = await requireModule('inventory')
   const tenantId = tenant.id
 
   const type = String(formData.get('type') ?? '')

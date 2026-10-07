@@ -5,6 +5,8 @@ import { Separator } from "@/components/ui/separator"
 import { TenantSwitcher } from "@/components/tenant-switcher"
 import { UserMenu } from "@/components/user-menu"
 import { listMemberships, requireTenant } from "@/lib/auth/session"
+import { getEnabledModuleKeys } from "@/lib/modules"
+import { MODULES } from "@/modules/registry"
 
 export default async function DashboardLayout({
   children,
@@ -12,14 +14,18 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const { user, tenant } = await requireTenant()
-  const rows = await listMemberships(user.id)
+  const [rows, enabledModules] = await Promise.all([
+    listMemberships(user.id),
+    getEnabledModuleKeys(tenant.id),
+  ])
   const tenantOptions = rows.map((r) => ({ id: r.tenant.id, name: r.tenant.name }))
+  const moduleNav = MODULES.filter((m) => enabledModules.has(m.key)).flatMap((m) => m.nav)
 
   return (
     <TooltipProvider>
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
-          <AppSidebar />
+          <AppSidebar moduleNav={moduleNav} />
           <div className="flex flex-col flex-1 w-full">
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger />

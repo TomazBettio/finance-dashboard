@@ -1,11 +1,11 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, movementReasons } from '@/modules/inventory/schema'
-import { requireTenant } from '@/lib/auth/session'
+import { requireModule } from '@/lib/modules'
 import { and, eq } from 'drizzle-orm'
 import { ProductTable } from '@/components/inventory/product-table'
 
 export default async function InventoryPage() {
-  const { tenant } = await requireTenant()
+  const { tenant } = await requireModule('inventory')
 
   const [rows, reasons] = await Promise.all([
     db

@@ -2,18 +2,80 @@
 
 import { db } from '@/lib/db'
 import { movementReasons } from '@/modules/inventory/schema'
-import { requireTenant } from '@/lib/auth/session'
+import { tenantModules } from '@/modules/core/schema'
+import { requireRole } from '@/lib/auth/session'
+import { requireModule, getEnabledModuleKeys } from '@/lib/modules'
+import { MODULES, getModule, isModuleKey, type ModuleKey } from '@/modules/registry'
 import { eq, and } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 type ActionState = { error: string } | { success: true } | null
 
+type TenantCtx = Awaited<ReturnType<typeof requireRole>>
+
+// requireRole lança Error('Sem permissão'); converte para null mantendo redirects (NEXT_REDIRECT) intactos.
+async function tryRequireRole(roles: ('owner' | 'admin' | 'member')[]): Promise<TenantCtx | null> {
+  try {
+    return await requireRole(roles)
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Sem permissão') return null
+    throw err
+  }
+}
+
+async function requireModuleAdmin(key: ModuleKey): Promise<TenantCtx | null> {
+  await requireModule(key)
+  return tryRequireRole(['owner', 'admin'])
+}
+
+export async function setModuleEnabled(
+  moduleKey: string,
+  enabled: boolean,
+): Promise<{ error: string } | { success: true }> {
+  const ctx = await tryRequireRole(['owner', 'admin'])
+  if (!ctx) return { error: 'Você não tem permissão para alterar módulos' }
+
+  if (!isModuleKey(moduleKey)) return { error: 'Módulo inválido' }
+  if (typeof enabled !== 'boolean') return { error: 'Parâmetro inválido' }
+
+  const mod = getModule(moduleKey)
+  if (!mod || mod.status === 'coming_soon') return { error: 'Módulo ainda não disponível' }
+
+  const enabledModules = await getEnabledModuleKeys(ctx.tenant.id)
+
+  if (enabled) {
+    const missing = mod.dependsOn.filter((dep) => !enabledModules.has(dep))
+    if (missing.length > 0) {
+      return { error: `Ative antes: ${missing.map((d) => getModule(d)?.name ?? d).join(', ')}` }
+    }
+  } else {
+    const dependents = MODULES.filter(
+      (m) => m.dependsOn.includes(moduleKey) && enabledModules.has(m.key),
+    )
+    if (dependents.length > 0) {
+      return { error: `Desative antes: ${dependents.map((m) => m.name).join(', ')}` }
+    }
+  }
+
+  await db
+    .insert(tenantModules)
+    .values({ tenantId: ctx.tenant.id, moduleKey, enabled })
+    .onConflictDoUpdate({
+      target: [tenantModules.tenantId, tenantModules.moduleKey],
+      set: { enabled, updatedAt: new Date() },
+    })
+
+  revalidatePath('/dashboard', 'layout')
+  return { success: true }
+}
+
 export async function createMovementReason(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { tenant } = await requireTenant()
-  const tenantId = tenant.id
+  const ctx = await requireModuleAdmin('inventory')
+  if (!ctx) return { error: 'Você não tem permissão para alterar motivos' }
+  const tenantId = ctx.tenant.id
 
   const name = String(formData.get('name') ?? '').trim()
   const type = String(formData.get('type') ?? '')
@@ -44,12 +106,13 @@ export async function createMovementReason(
 }
 
 export async function deleteMovementReason(id: number): Promise<void> {
-  const { tenant } = await requireTenant()
+  const ctx = await requireModuleAdmin('inventory')
+  if (!ctx) return
   if (!Number.isInteger(id) || id <= 0) return
 
   await db
     .delete(movementReasons)
-    .where(and(eq(movementReasons.id, id), eq(movementReasons.tenantId, tenant.id)))
+    .where(and(eq(movementReasons.id, id), eq(movementReasons.tenantId, ctx.tenant.id)))
 
   revalidatePath('/dashboard/settings')
   revalidatePath('/dashboard/inventory')

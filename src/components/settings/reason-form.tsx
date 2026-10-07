@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ArrowUpFromLine, ArrowDownToLine } from 'lucide-react'
 
-export function ReasonForm() {
+export function ReasonForm({ disabled }: { disabled?: boolean }) {
   const [type, setType] = useState<'entry' | 'exit'>('exit')
   const [state, formAction, pending] = useActionState(createMovementReason, null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -22,6 +22,7 @@ export function ReasonForm() {
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
+          disabled={disabled}
           onClick={() => setType('entry')}
           className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
             type === 'entry'
@@ -34,6 +35,7 @@ export function ReasonForm() {
         </button>
         <button
           type="button"
+          disabled={disabled}
           onClick={() => setType('exit')}
           className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
             type === 'exit'
@@ -55,8 +57,9 @@ export function ReasonForm() {
           name="name"
           placeholder={type === 'entry' ? 'Ex: Compra, Devolução…' : 'Ex: Venda, Avaria, Perda…'}
           className="flex-1"
+          disabled={disabled}
         />
-        <Button type="submit" size="sm" disabled={pending}>
+        <Button type="submit" size="sm" disabled={pending || disabled}>
           {pending ? '…' : 'Adicionar'}
         </Button>
       </div>
