@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, stockMovements, movementReasons } from '@/modules/inventory/schema'
-import { getOrCreateTenant } from '@/lib/tenant'
+import { requireTenant } from '@/lib/auth/session'
 import { eq, sum, count, sql, desc, and, gte } from 'drizzle-orm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Package, AlertCircle, ArrowDownToLine, ArrowUpFromLine, Layers } from 'lucide-react'
@@ -53,7 +53,7 @@ function buildChartData(
 }
 
 export default async function DashboardPage() {
-  const tenant = await getOrCreateTenant()
+  const { tenant } = await requireTenant()
   const tenantId = tenant.id
 
   const fourteenDaysAgo = new Date()
@@ -78,13 +78,19 @@ export default async function DashboardPage() {
       })
       .from(inventoryStock)
       .innerJoin(products, eq(inventoryStock.productId, products.id))
-      .where(eq(products.tenantId, tenantId)),
+      .where(and(eq(inventoryStock.tenantId, tenantId), eq(products.tenantId, tenantId))),
 
     db
       .select({ count: count() })
       .from(inventoryStock)
       .innerJoin(products, eq(inventoryStock.productId, products.id))
-      .where(and(eq(products.tenantId, tenantId), eq(inventoryStock.quantity, 0))),
+      .where(
+        and(
+          eq(inventoryStock.tenantId, tenantId),
+          eq(products.tenantId, tenantId),
+          eq(inventoryStock.quantity, 0),
+        ),
+      ),
 
     db
       .select({

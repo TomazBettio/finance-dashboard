@@ -1,11 +1,11 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, movementReasons } from '@/modules/inventory/schema'
-import { getOrCreateTenant } from '@/lib/tenant'
-import { eq } from 'drizzle-orm'
+import { requireTenant } from '@/lib/auth/session'
+import { and, eq } from 'drizzle-orm'
 import { ProductTable } from '@/components/inventory/product-table'
 
 export default async function InventoryPage() {
-  const tenant = await getOrCreateTenant()
+  const { tenant } = await requireTenant()
 
   const [rows, reasons] = await Promise.all([
     db
@@ -18,7 +18,10 @@ export default async function InventoryPage() {
         location: inventoryStock.location,
       })
       .from(products)
-      .leftJoin(inventoryStock, eq(products.id, inventoryStock.productId))
+      .leftJoin(
+        inventoryStock,
+        and(eq(products.id, inventoryStock.productId), eq(inventoryStock.tenantId, tenant.id)),
+      )
       .where(eq(products.tenantId, tenant.id)),
     db
       .select({

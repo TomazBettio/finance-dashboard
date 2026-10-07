@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { movementReasons } from '@/modules/inventory/schema'
-import { getOrCreateTenant } from '@/lib/tenant'
+import { requireTenant } from '@/lib/auth/session'
 import { eq } from 'drizzle-orm'
 import { ReasonForm } from '@/components/settings/reason-form'
 import { SettingsCard } from '@/components/settings/settings-card'
@@ -8,7 +8,7 @@ import { deleteMovementReason } from '@/modules/settings/actions'
 import { Tag, Trash2 } from 'lucide-react'
 
 export default async function SettingsPage() {
-  const tenant = await getOrCreateTenant()
+  const { tenant } = await requireTenant()
 
   const reasons = await db
     .select({ id: movementReasons.id, name: movementReasons.name, type: movementReasons.type })

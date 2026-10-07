@@ -2,12 +2,19 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
+import { TenantSwitcher } from "@/components/tenant-switcher"
+import { UserMenu } from "@/components/user-menu"
+import { listMemberships, requireTenant } from "@/lib/auth/session"
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { user, tenant } = await requireTenant()
+  const rows = await listMemberships(user.id)
+  const tenantOptions = rows.map((r) => ({ id: r.tenant.id, name: r.tenant.name }))
+
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -18,8 +25,8 @@ export default function DashboardLayout({
               <SidebarTrigger />
               <Separator orientation="vertical" className="h-6 mx-2" />
               <div className="flex flex-1 items-center justify-between">
-                <span className="text-sm font-medium">Visão Geral</span>
-                {/* Aqui poderíamos ter um menu de usuário / Avatar */}
+                <TenantSwitcher tenants={tenantOptions} currentTenantId={tenant.id} />
+                <UserMenu name={user.name} email={user.email} />
               </div>
             </header>
             <main className="flex-1 p-6 bg-muted/20">

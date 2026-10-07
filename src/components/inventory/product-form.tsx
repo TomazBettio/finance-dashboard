@@ -58,11 +58,10 @@ export function ProductForm({ product, onSuccess }: Props) {
         <label className="text-sm font-medium">Preço (R$)</label>
         <Input
           name="basePrice"
-          type="number"
-          step="0.01"
-          min="0"
-          defaultValue={product ? (product.basePrice / 100).toFixed(2) : ''}
-          placeholder="0.00"
+          type="text"
+          inputMode="decimal"
+          defaultValue={product ? (product.basePrice / 100).toFixed(2).replace('.', ',') : ''}
+          placeholder="0,00"
         />
       </div>
 

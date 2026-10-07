@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, integer, jsonb, text, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, jsonb, text, pgEnum, index } from "drizzle-orm/pg-core";
 import { tenants } from "../core/schema";
 import { orders } from "../sales/schema";
 import { products } from "../inventory/schema";
@@ -61,7 +61,9 @@ export const invoices = pgTable("invoices", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("invoices_tenant_id_idx").on(t.tenantId),
+]);
 
 export const invoiceItems = pgTable("invoice_items", {
   id: serial("id").primaryKey(),

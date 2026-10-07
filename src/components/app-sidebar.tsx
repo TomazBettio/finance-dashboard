@@ -9,7 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Package, Receipt, Wallet, Settings } from "lucide-react"
+import { LayoutDashboard, Package, Settings } from "lucide-react"
 import Link from "next/link"
 
 const items = [
@@ -22,16 +22,6 @@ const items = [
     title: "Produtos (Estoque)",
     url: "/dashboard/inventory",
     icon: Package,
-  },
-  {
-    title: "Financeiro",
-    url: "/dashboard/finance",
-    icon: Wallet,
-  },
-  {
-    title: "Notas Fiscais",
-    url: "/dashboard/invoices",
-    icon: Receipt,
   },
   {
     title: "Configurações",
