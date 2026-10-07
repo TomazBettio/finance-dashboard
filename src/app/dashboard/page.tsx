@@ -74,7 +74,7 @@ export default async function DashboardPage() {
     db
       .select({
         totalUnits: sum(inventoryStock.quantity),
-        totalValue: sql<string>`coalesce(sum(${products.basePrice} * ${inventoryStock.quantity}), 0)::bigint`,
+        totalValue: sql<string>`coalesce(sum(${products.basePrice}::bigint * ${inventoryStock.quantity}), 0)::bigint`,
       })
       .from(inventoryStock)
       .innerJoin(products, eq(inventoryStock.productId, products.id))

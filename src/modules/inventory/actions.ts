@@ -3,10 +3,12 @@
 import { db } from '@/lib/db'
 import { products, inventoryStock, stockMovements, movementReasons } from './schema'
 import { requireTenant } from '@/lib/auth/session'
-import { and, eq, gte, ne, sql } from 'drizzle-orm'
+import { and, eq, gte, lte, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 type ActionState = { error: string } | { success: true } | null
+
+const MAX_INT = 2147483647
 
 // Aceita pt-BR ("1.234,56", "1234,56", "1234") e decimal com ponto ("1234.56"); retorna centavos ou null se inválido.
 function parsePrice(raw: string | null): number | null {
@@ -25,7 +27,7 @@ function parsePrice(raw: string | null): number | null {
   }
 
   const cents = Math.round(Number(normalized) * 100)
-  return Number.isSafeInteger(cents) ? cents : null
+  return Number.isSafeInteger(cents) && cents <= MAX_INT ? cents : null
 }
 
 function parseId(raw: unknown): number | null {
@@ -35,7 +37,7 @@ function parseId(raw: unknown): number | null {
 
 function parseQuantity(raw: unknown): number | null {
   const n = Number(String(raw ?? '').trim())
-  return Number.isInteger(n) && n >= 0 ? n : null
+  return Number.isInteger(n) && n >= 0 && n <= MAX_INT ? n : null
 }
 
 type ProductFields = {
@@ -295,13 +297,23 @@ export async function registerStockMovement(
         }
       }
     } else {
-      await tx
+      const updated = await tx
         .update(inventoryStock)
         .set({
           quantity: sql`${inventoryStock.quantity} + ${quantity}`,
           updatedAt: new Date(),
         })
-        .where(and(eq(inventoryStock.id, stock.id), eq(inventoryStock.tenantId, tenantId)))
+        .where(
+          and(
+            eq(inventoryStock.id, stock.id),
+            eq(inventoryStock.tenantId, tenantId),
+            lte(inventoryStock.quantity, MAX_INT - quantity),
+          ),
+        )
+        .returning({ id: inventoryStock.id })
+      if (updated.length === 0) {
+        return { error: 'Quantidade excede o limite de estoque' }
+      }
     }
 
     await tx
